@@ -5,7 +5,7 @@ const SourceMap = require('./SourceMap.js');
 const slash = require('./utils/slash.js');
 const SOURCEMAPPING_URL = require('./utils/sourceMappingURL.js');
 
-const SOURCEMAP_COMMENT = new RegExp( `\n*(?:` +
+const SOURCEMAP_COMMENT = new RegExp( '\n*(?:' +
 	`\\/\\/[@#]\\s*${SOURCEMAPPING_URL}=([^'"]+)|` +      // js
 	`\\/\\*#?\\s*${SOURCEMAPPING_URL}=([^'"]+)\\s\\*\\/)` + // css
 '\\s*$', 'g' );

@@ -24,7 +24,7 @@ function Node ({ file, content }) {
 
 		untraceable: 0
 	};
-}
+};
 
 module.exports = Node;
 
