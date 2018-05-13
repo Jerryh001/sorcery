@@ -27,6 +27,8 @@ var sorcery = require( 'sorcery' );
 sorcery.load( 'some/generated/code.min.js' ).then( function ( chain ) {
   // generate a flattened sourcemap
   var map = chain.apply({
+    // the root path of all source paths (default: process.cwd())
+    base: process.cwd(),
     // include `sourcesContent` in final map (default: true)
     includeContent: false,
   }); // { version: 3, file: 'code.min.js', ... }
