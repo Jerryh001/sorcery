@@ -3,7 +3,11 @@ const getMapFromUrl = require('./getMapFromUrl.js');
 const getSourceMappingUrl = require('./getSourceMappingUrl.js');
 
 module.exports = function getMap ( node, sourceMapByPath, sync ) {
-	if ( node.file in sourceMapByPath ) {
+	if ( node.map ) {
+		return sync ? node.map : Promise.resolve( node.map );
+	}
+
+	else if ( node.file in sourceMapByPath ) {
 		const map = sourceMapByPath[ node.file ];
 		return sync ? map : Promise.resolve( map );
 	}
