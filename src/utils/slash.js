@@ -1,5 +1,5 @@
-export default function slash ( path ) {
+module.exports = function slash ( path ) {
 	return typeof path === 'string' ?
 		path.replace( /\\/g, '/' ) :
 		path;
-}
+};

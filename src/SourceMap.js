@@ -1,6 +1,6 @@
-import btoa from './utils/btoa.js';
+const btoa = require('./utils/btoa.js');
 
-export default function SourceMap ( properties ) {
+function SourceMap ( properties ) {
 	this.version = 3;
 
 	this.file           = properties.file;
@@ -9,6 +9,8 @@ export default function SourceMap ( properties ) {
 	this.names          = properties.names;
 	this.mappings       = properties.mappings;
 }
+
+module.exports = SourceMap;
 
 SourceMap.prototype = {
 	toString () {

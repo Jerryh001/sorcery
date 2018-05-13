@@ -1,7 +1,7 @@
-import { dirname, resolve } from 'path';
-import { readFile, readFileSync, Promise } from 'sander';
-import atob from './atob.js';
-import SOURCEMAPPING_URL from './sourceMappingURL.js';
+const { dirname, resolve } = require('path');
+const { readFile, readFileSync, Promise } = require('sander');
+const atob = require('./atob.js');
+const SOURCEMAPPING_URL = require('./sourceMappingURL.js');
 
 function parseJSON ( json, url ) {
 	try {
@@ -21,7 +21,7 @@ function parseJSON ( json, url ) {
    return the sourcemap
  * @returns {object} - a version 3 sourcemap
  */
-export default function getMapFromUrl ( url, base, sync ) {
+module.exports = function getMapFromUrl ( url, base, sync ) {
 	if ( /^data:/.test( url ) ) { // TODO beef this up
 		const match = /base64,(.+)$/.exec( url );
 
@@ -41,4 +41,4 @@ export default function getMapFromUrl ( url, base, sync ) {
 	} else {
 		return readFile( url, { encoding: 'utf-8' }).then( json => parseJSON( json, url ) );
 	}
-}
+};

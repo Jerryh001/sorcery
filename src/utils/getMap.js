@@ -1,8 +1,8 @@
-import { Promise } from 'sander';
-import getMapFromUrl from './getMapFromUrl.js';
-import getSourceMappingUrl from './getSourceMappingUrl.js';
+const { Promise } = require('sander');
+const getMapFromUrl = require('./getMapFromUrl.js');
+const getSourceMappingUrl = require('./getSourceMappingUrl.js');
 
-export default function getMap ( node, sourceMapByPath, sync ) {
+module.exports = function getMap ( node, sourceMapByPath, sync ) {
 	if ( node.file in sourceMapByPath ) {
 		const map = sourceMapByPath[ node.file ];
 		return sync ? map : Promise.resolve( map );
@@ -18,4 +18,4 @@ export default function getMap ( node, sourceMapByPath, sync ) {
 
 		return getMapFromUrl( url, node.file, sync );
 	}
-}
+};

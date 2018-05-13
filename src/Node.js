@@ -1,9 +1,9 @@
-import { dirname, resolve } from 'path';
-import { readFile, readFileSync, Promise } from 'sander';
-import { decode } from 'sourcemap-codec';
-import getMap from './utils/getMap.js';
+const { dirname, resolve } = require('path');
+const { readFile, readFileSync, Promise } = require('sander');
+const { decode } = require('sourcemap-codec');
+const getMap = require('./utils/getMap.js');
 
-export default function Node ({ file, content }) {
+function Node ({ file, content }) {
 	this.file = file ? resolve( file ) : null;
 	this.content = content || null; // sometimes exists in sourcesContent, sometimes doesn't
 
@@ -25,6 +25,8 @@ export default function Node ({ file, content }) {
 		untraceable: 0
 	};
 }
+
+module.exports = Node;
 
 Node.prototype = {
 	load ( sourcesContentByPath, sourceMapByPath ) {

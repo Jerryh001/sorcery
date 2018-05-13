@@ -1,6 +1,6 @@
-import SOURCEMAPPING_URL from './sourceMappingURL.js';
+const SOURCEMAPPING_URL = require('./sourceMappingURL.js');
 
-export default function getSourceMappingUrl ( str ) {
+module.exports = function getSourceMappingUrl ( str ) {
 	var index, substring, url, match;
 
 	// assume we want the last occurence
@@ -22,4 +22,4 @@ export default function getSourceMappingUrl ( str ) {
 	}
 
 	return url;
-}
+};

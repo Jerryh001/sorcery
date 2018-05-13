@@ -1,20 +1,20 @@
-import { resolve } from 'path';
-import Node from './Node.js';
-import Chain from './Chain.js';
+const { resolve } = require('path');
+const Node = require('./Node.js');
+const Chain = require('./Chain.js');
 
-export function load ( file, options ) {
+exports.load = function ( file, options ) {
 	const { node, sourcesContentByPath, sourceMapByPath } = init( file, options );
 
 	return node.load( sourcesContentByPath, sourceMapByPath )
 		.then( () => node.isOriginalSource ? null : new Chain( node, sourcesContentByPath ) );
-}
+};
 
-export function loadSync ( file, options = {} ) {
+exports.loadSync = function ( file, options = {} ) {
 	const { node, sourcesContentByPath, sourceMapByPath } = init( file, options );
 
 	node.loadSync( sourcesContentByPath, sourceMapByPath );
 	return node.isOriginalSource ? null : new Chain( node, sourcesContentByPath );
-}
+};
 
 function init ( file, options = {} ) {
 	const node = new Node({ file });

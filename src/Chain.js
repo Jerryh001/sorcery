@@ -1,21 +1,23 @@
-import { basename, dirname, extname, relative, resolve } from 'path';
-import { writeFile, writeFileSync } from 'sander';
-import { encode } from 'sourcemap-codec';
-import SourceMap from './SourceMap.js';
-import slash from './utils/slash.js';
-import SOURCEMAPPING_URL from './utils/sourceMappingURL.js';
+const { basename, dirname, extname, relative, resolve } = require('path');
+const { writeFile, writeFileSync } = require('sander');
+const { encode } = require('sourcemap-codec');
+const SourceMap = require('./SourceMap.js');
+const slash = require('./utils/slash.js');
+const SOURCEMAPPING_URL = require('./utils/sourceMappingURL.js');
 
 const SOURCEMAP_COMMENT = new RegExp( `\n*(?:` +
 	`\\/\\/[@#]\\s*${SOURCEMAPPING_URL}=([^'"]+)|` +      // js
 	`\\/\\*#?\\s*${SOURCEMAPPING_URL}=([^'"]+)\\s\\*\\/)` + // css
 '\\s*$', 'g' );
 
-export default function Chain ( node, sourcesContentByPath ) {
+function Chain ( node, sourcesContentByPath ) {
 	this.node = node;
 	this.sourcesContentByPath = sourcesContentByPath;
 
 	this._stats = {};
 }
+
+module.exports = Chain;
 
 Chain.prototype = {
 	stat () {
