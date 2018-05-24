@@ -29,12 +29,14 @@ const sourceMap = sorcery(sources, {
 
 ### Options
 - `sourceRoot: ?string` the root of all source paths in the new sourcemap
+- `generatedFile: ?string` the file that the new sourcemap accompanies
 - `includeContent: ?boolean` whether to embed source contents in the new sourcemap (default: `true`)
 - `readFile(file)` read the contents of a file (may be a source or sourcemap)
 - `getMap(file)` get a sourcemap from your file cache
 
-The `sourceRoot` option defaults to the parent directory of the last source in
-the chain (if it has a filename).
+The `sourceRoot` option defaults to the parent directory of either the
+`generatedFile` path or the filename of the last source in the chain.
+The working directory is used if all else fails.
 
 ## License
 

@@ -95,20 +95,22 @@ class Chain {
     const encodingTime = process.hrtime(encodingStart);
     this._stats.encodingTime = 1e9 * encodingTime[0] + encodingTime[1];
 
-    const includeContent = opts.includeContent !== false;
+    const generatedFile = opts.generatedFile || last.file;
     const sourceRoot = opts.sourceRoot
       ? resolve(opts.sourceRoot)
-      : last.file
-        ? dirname(last.file)
+      : generatedFile
+        ? dirname(generatedFile)
         : process.cwd();
 
+    const includeContent = opts.includeContent !== false;
+    const sourcesContent = allSources
+      .map(includeContent ? opts.readFile : () => null);
+
     return new SourceMap({
-      file: last.file ? basename(last.file) : null,
+      file: generatedFile ? relative(sourceRoot, generatedFile) : null,
       sources: allSources.map(source => slash(relative(sourceRoot, source))),
       sourceRoot: slash(sourceRoot),
-      sourcesContent: allSources.map(
-        source => (includeContent ? opts.readFile(source) : null)
-      ),
+      sourcesContent,
       names: allNames,
       mappings
     });
