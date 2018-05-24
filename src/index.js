@@ -4,9 +4,9 @@ const SourceMap = require("./SourceMap.js");
 const assert = require("invariant");
 const Node = require("./Node.js");
 
-function sorcery(sources, opts = {}) {
-  const len = sources.length;
-  assert(len >= 2, "`sources` array must have 2+ values");
+function sorcery(chain, opts = {}) {
+  const len = chain.length;
+  assert(len >= 2, "`chain` array must have 2+ values");
 
   // Hooks into the user's file cache.
   if (!opts.readFile) opts.readFile = noop;
@@ -14,9 +14,9 @@ function sorcery(sources, opts = {}) {
 
   const nodes = new Array(len);
 
-  // Process the sources in reverse order.
+  // Process the chain in reverse order.
   for (let i = len - 1; i >= 0; i--) {
-    const source = sources[i];
+    const source = chain[i];
     const node = new Node({
       file: source.file,
       content: source.content || source,
@@ -39,21 +39,14 @@ function sorcery(sources, opts = {}) {
     nodes[i] = node;
   }
 
-  // The last source given might be generated.
+  // The last node might be generated.
   nodes[len - 1].loadSources(opts);
 
-  // Trace back to the original source(s).
-  return mergeSourceMaps(nodes[0], opts);
-}
+  // Trace through the entire chain.
+  const names = [], sources = [];
+  const mappings = resolveMappings(nodes[0], names, sources);
 
-module.exports = sorcery;
-
-function mergeSourceMaps(node, opts) {
-  const names = [];
-  const sources = [];
-  const mappings = resolveMappings(node, names, sources);
-
-  const generatedFile = opts.generatedFile || node.file;
+  const generatedFile = opts.generatedFile || nodes[0].file;
   const sourceRoot = opts.sourceRoot
     ? resolve(opts.sourceRoot)
     : generatedFile
@@ -66,7 +59,7 @@ function mergeSourceMaps(node, opts) {
   );
 
   return new SourceMap({
-    file: generatedFile ? relative(sourceRoot, generatedFile) : null,
+    file: generatedFile ? slash(relative(sourceRoot, generatedFile)) : null,
     sources: sources.map(source => slash(relative(sourceRoot, source))),
     sourceRoot: slash(sourceRoot),
     sourcesContent,
@@ -75,6 +68,9 @@ function mergeSourceMaps(node, opts) {
   });
 }
 
+module.exports = sorcery;
+
+// Where the magic happens.
 function resolveMappings(node, names, sources) {
   let i = node.mappings.length;
   let mappings = new Array(i);
@@ -122,7 +118,7 @@ function resolveMappings(node, names, sources) {
 }
 
 function slash(path) {
-  return typeof path === "string" ? path.replace(/\\/g, "/") : path;
+  return path.replace(/\\/g, "/");
 }
 
 function noop() {
