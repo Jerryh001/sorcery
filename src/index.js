@@ -25,8 +25,10 @@ function sorcery(sources, opts = {}) {
     });
 
     if (source.map) {
-      node.map = source.map;
       node.isOriginalSource = false;
+      node.map = typeof source.map == "string"
+        ? JSON.parse(source.map)
+        : source.map;
     } else {
       node.loadMappings(opts);
     }
