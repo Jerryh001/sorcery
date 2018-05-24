@@ -1,28 +1,14 @@
-const { basename, dirname, extname, relative, resolve } = require("path");
-const { writeFile, writeFileSync } = require("sander");
+const { basename, dirname, relative, resolve } = require("path");
 const { encode } = require("sourcemap-codec");
 const SourceMap = require("./SourceMap.js");
-const slash = require("./utils/slash.js");
-const SOURCEMAPPING_URL = require("./utils/sourceMappingURL.js");
 
-const SOURCEMAP_COMMENT = new RegExp(
-  "\n*(?:" +
-  `\\/\\/[@#]\\s*${SOURCEMAPPING_URL}=([^'"]+)|` + // js
-  `\\/\\*#?\\s*${SOURCEMAPPING_URL}=([^'"]+)\\s\\*\\/)` + // css
-    "\\s*$",
-  "g"
-);
+class Chain {
+  constructor(node) {
+    this.node = node;
 
-function Chain(node, sourcesContentByPath) {
-  this.node = node;
-  this.sourcesContentByPath = sourcesContentByPath;
+    this._stats = {};
+  }
 
-  this._stats = {};
-}
-
-module.exports = Chain;
-
-Chain.prototype = {
   stat() {
     return {
       selfDecodingTime: this._stats.decodingTime / 1e6,
@@ -35,20 +21,21 @@ Chain.prototype = {
 
       untraceable: this._stats.untraceable
     };
-  },
+  }
 
-  apply(options = {}) {
+  apply(opts = {}) {
     let allNames = [];
     let allSources = [];
 
+    const last = this.node;
     const applySegment = (segment, result) => {
       if (segment.length < 4) return;
 
-      const traced = this.node.sources[segment[1]].trace(
+      const traced = last.sources[segment[1]].trace(
         // source
         segment[2], // source code line
         segment[3], // source code column
-        this.node.map.names[segment[4]]
+        last.map.names[segment[4]]
       );
 
       if (!traced) {
@@ -83,15 +70,15 @@ Chain.prototype = {
     };
 
     // Trace mappings
-    let tracingStart = process.hrtime();
+    const tracingStart = process.hrtime();
 
-    let i = this.node.mappings.length;
+    let i = last.mappings.length;
     let resolved = new Array(i);
 
     let j, line, result;
 
     while (i--) {
-      line = this.node.mappings[i];
+      line = last.mappings[i];
       resolved[i] = result = [];
 
       for (j = 0; j < line.length; j += 1) {
@@ -103,91 +90,36 @@ Chain.prototype = {
     this._stats.tracingTime = 1e9 * tracingTime[0] + tracingTime[1];
 
     // Encode mappings
-    let encodingStart = process.hrtime();
-    let mappings = encode(resolved);
-    let encodingTime = process.hrtime(encodingStart);
+    const encodingStart = process.hrtime();
+    const mappings = encode(resolved);
+    const encodingTime = process.hrtime(encodingStart);
     this._stats.encodingTime = 1e9 * encodingTime[0] + encodingTime[1];
 
-    let includeContent = options.includeContent !== false;
-
-    let sourceRoot = options.base
-      ? resolve(options.base)
-      : this.node.file
-        ? dirname(this.node.file)
+    const includeContent = opts.includeContent !== false;
+    const sourceRoot = opts.sourceRoot
+      ? resolve(opts.sourceRoot)
+      : last.file
+        ? dirname(last.file)
         : process.cwd();
 
     return new SourceMap({
-      file: this.node.file ? basename(this.node.file) : null,
+      file: last.file ? basename(last.file) : null,
       sources: allSources.map(source => slash(relative(sourceRoot, source))),
       sourceRoot: slash(sourceRoot),
       sourcesContent: allSources.map(
-        source => (includeContent ? this.sourcesContentByPath[source] : null)
+        source => (includeContent ? opts.readFile(source) : null)
       ),
       names: allNames,
       mappings
     });
-  },
+  }
 
   trace(oneBasedLineIndex, zeroBasedColumnIndex) {
     return this.node.trace(oneBasedLineIndex - 1, zeroBasedColumnIndex, null);
-  },
-
-  write(dest, options) {
-    if (typeof dest !== "string") {
-      options = dest;
-      dest = this.node.file;
-    }
-
-    options = options || {};
-
-    const { resolved, content, map } = processWriteOptions(dest, this, options);
-
-    let promises = [writeFile(resolved, content)];
-
-    if (!options.inline) {
-      promises.push(writeFile(resolved + ".map", map.toString()));
-    }
-
-    return Promise.all(promises);
-  },
-
-  writeSync(dest, options) {
-    if (typeof dest !== "string") {
-      options = dest;
-      dest = this.node.file;
-    }
-
-    options = options || {};
-
-    const { resolved, content, map } = processWriteOptions(dest, this, options);
-
-    writeFileSync(resolved, content);
-
-    if (!options.inline) {
-      writeFileSync(resolved + ".map", map.toString());
-    }
   }
-};
-
-function processWriteOptions(dest, chain, options) {
-  const resolved = resolve(dest);
-
-  const map = chain.apply({
-    includeContent: options.includeContent,
-    base: options.base ? resolve(options.base) : dirname(resolved)
-  });
-
-  const url = options.inline
-    ? map.toUrl()
-    : (options.absolutePath ? resolved : basename(resolved)) + ".map";
-
-  // TODO shouldn't url be relative?
-  const content =
-    chain.node.content.replace(SOURCEMAP_COMMENT, "") +
-    sourcemapComment(url, resolved);
-
-  return { resolved, content, map };
 }
+
+module.exports = Chain;
 
 function tally(nodes, stat) {
   return nodes.reduce((total, node) => {
@@ -195,13 +127,6 @@ function tally(nodes, stat) {
   }, 0);
 }
 
-function sourcemapComment(url, dest) {
-  const ext = extname(dest);
-  url = encodeURI(url);
-
-  if (ext === ".css") {
-    return `\n/*# ${SOURCEMAPPING_URL}=${url} */\n`;
-  }
-
-  return `\n//# ${SOURCEMAPPING_URL}=${url}\n`;
+function slash(path) {
+  return typeof path === "string" ? path.replace(/\\/g, "/") : path;
 }

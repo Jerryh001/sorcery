@@ -1,81 +1,49 @@
-const { resolve } = require("path");
 const Node = require("./Node.js");
 const Chain = require("./Chain.js");
-const getMap = require("./utils/getMap.js");
+const assert = require("invariant");
 
-function sorcery(sources, options) {
-  let sourcesContentByPath = {};
-  let sourceMapByPath = {};
+function noop() {
+  return null;
+}
 
-  const loadSync = function(source, parent) {
+function sorcery(sources, opts = {}) {
+  const len = sources.length;
+  assert(len >= 2, "`sources` array must have 2+ values");
+
+  // Hooks into the user's file cache.
+  if (!opts.readFile) opts.readFile = noop;
+  if (!opts.getMap) opts.getMap = noop;
+
+  const nodes = new Array(len);
+
+  // Process the sources in reverse order.
+  for (let i = len - 1; i >= 0; i--) {
+    const source = sources[i];
     const node = new Node({
-      content: source.content || source
+      file: source.file,
+      content: source.content || source,
     });
+
     if (source.map) {
       node.map = source.map;
       node.isOriginalSource = false;
     } else {
-      node.map = getMap(node, sourceMapByPath, true);
+      node.loadMappings(opts);
     }
-    if (node.map) {
-      node.decode();
-      node.sources = parent ? [parent] : null;
-    }
-    return node;
-  };
 
-  const nodes = [];
-  for (let i = sources.length - 1; i >= 0; i--) {
-    nodes.unshift(loadSync(sources[i], nodes[0]));
-  }
-  if (!nodes.length) {
-    return null;
+    const parent = nodes[i + 1];
+    if (parent) {
+      assert(node.map, "Only the last source can have no sourcemap");
+      node.sources = [parent];
+    }
+    nodes[i] = node;
   }
 
-  const last = nodes[nodes.length - 1];
-  last.loadSync(sourcesContentByPath, sourceMapByPath);
+  // The last source may have a sourcemap.
+  nodes[len - 1].loadSources(opts);
 
-  const chain = new Chain(nodes[0], sourcesContentByPath);
-  return chain.apply(options);
+  // Trace back to the last source(s).
+  return (new Chain(nodes[0])).apply(opts);
 }
-
-sorcery.load = function(file, options) {
-  const { node, sourcesContentByPath, sourceMapByPath } = init(file, options);
-
-  return node
-    .load(sourcesContentByPath, sourceMapByPath)
-    .then(
-      () =>
-        node.isOriginalSource ? null : new Chain(node, sourcesContentByPath)
-    );
-};
-
-sorcery.loadSync = function(file, options = {}) {
-  const { node, sourcesContentByPath, sourceMapByPath } = init(file, options);
-
-  node.loadSync(sourcesContentByPath, sourceMapByPath);
-  return node.isOriginalSource ? null : new Chain(node, sourcesContentByPath);
-};
 
 module.exports = sorcery;
-
-function init(file, options = {}) {
-  const node = new Node({ file });
-
-  let sourcesContentByPath = {};
-  let sourceMapByPath = {};
-
-  if (options.content) {
-    Object.keys(options.content).forEach(key => {
-      sourcesContentByPath[resolve(key)] = options.content[key];
-    });
-  }
-
-  if (options.sourcemaps) {
-    Object.keys(options.sourcemaps).forEach(key => {
-      sourceMapByPath[resolve(key)] = options.sourcemaps[key];
-    });
-  }
-
-  return { node, sourcesContentByPath, sourceMapByPath };
-}

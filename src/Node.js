@@ -1,127 +1,88 @@
 const { dirname, resolve } = require("path");
-const { readFile, readFileSync, Promise } = require("sander");
 const { decode } = require("sourcemap-codec");
-const getMap = require("./utils/getMap.js");
+const assert = require("invariant");
 
-function Node({ file, content }) {
-  this.file = file ? resolve(file) : null;
-  this.content = content || null; // sometimes exists in sourcesContent, sometimes doesn't
+class Node {
+  constructor(opts) {
+    assert(opts.file || opts.content != null, "Sources must have a `file` path or `content` string");
 
-  if (!this.file && this.content === null) {
-    throw new Error("A source must specify either file or content");
+    this.file = opts.file ? resolve(opts.file) : null;
+    this.content = opts.content;
+
+    this.map = null;
+    this.mappings = null;
+    this.sources = null;
+    this.isOriginalSource = null;
+
+    this._stats = {
+      decodingTime: 0,
+      encodingTime: 0,
+      tracingTime: 0,
+
+      untraceable: 0
+    };
   }
 
-  // these get filled in later
-  this.map = null;
-  this.mappings = null;
-  this.sources = null;
-  this.isOriginalSource = null;
-
-  this._stats = {
-    decodingTime: 0,
-    encodingTime: 0,
-    tracingTime: 0,
-
-    untraceable: 0
-  };
-}
-
-module.exports = Node;
-
-Node.prototype = {
-  decode() {
-    if (this.map && !this.mappings) {
-      let decodingStart = process.hrtime();
-      this.mappings = decode(this.map.mappings);
-      let decodingTime = process.hrtime(decodingStart);
-      this._stats.decodingTime = 1e9 * decodingTime[0] + decodingTime[1];
-    }
-  },
-
-  load(sourcesContentByPath, sourceMapByPath) {
-    return getContent(this, sourcesContentByPath).then(content => {
-      this.content = sourcesContentByPath[this.file] = content;
-
-      return getMap(this, sourceMapByPath).then(map => {
-        if (!map) return null;
-
-        this.map = map;
-        this.decode();
-
-        const sourcesContent = map.sourcesContent || [];
-
-        const sourceRoot = resolve(
-          this.file ? dirname(this.file) : "",
-          map.sourceRoot || ""
-        );
-
-        this.sources = map.sources.map((source, i) => {
-          return new Node({
-            file: source ? resolve(sourceRoot, source) : null,
-            content: sourcesContent[i]
-          });
-        });
-
-        const promises = this.sources.map(node =>
-          node.load(sourcesContentByPath, sourceMapByPath)
-        );
-        return Promise.all(promises);
-      });
-    });
-  },
-
-  loadSync(sourcesContentByPath, sourceMapByPath) {
-    if (!this.content) {
-      if (!sourcesContentByPath[this.file]) {
-        sourcesContentByPath[this.file] = readFileSync(this.file, {
-          encoding: "utf-8"
-        });
+  loadMappings(opts) {
+    let map = opts.getMap(this.file) || null;
+    if (typeof map == "string") {
+      map = JSON.parse(map);
+    } else if (map == null) {
+      if (this.content == null) {
+        this.content = opts.readFile(this.file);
+        if (this.content == null) {
+          throw Error(`Source does not exist: '${this.file}'`);
+        }
       }
-
-      this.content = sourcesContentByPath[this.file];
+      const url = parseMapUrl(this.content);
+      if (url) {
+        if (/^data:/.test(url)) {
+          const match = /;base64,([+a-z/0-9]+)$/.exec(url);
+          assert(match, "Sourcemap URL is not base64-encoded");
+          map = JSON.parse(atob(match[1]));
+        } else {
+          const file = resolve(dirname(this.file), decodeURI(url));
+          map = opts.readFile(file);
+          if (map == null) {
+            throw Error(`Sourcemap does not exist: '${file}'`);
+          }
+          map = JSON.parse(map);
+        }
+      }
     }
-
-    const map = getMap(this, sourceMapByPath, true);
-    let sourcesContent;
-
     if (map) {
       this.map = map;
-      this.decode();
-
-      sourcesContent = map.sourcesContent || [];
-
-      const sourceRoot = resolve(
-        this.file ? dirname(this.file) : "",
-        map.sourceRoot || ""
-      );
-
-      this.sources = map.sources.map((source, i) => {
-        const node = new Node({
-          file: resolve(sourceRoot, source),
-          content: sourcesContent[i]
-        });
-
-        node.loadSync(sourcesContentByPath, sourceMapByPath);
-        return node;
-      });
+      const decodingStart = process.hrtime();
+      this.mappings = decode(map.mappings);
+      const decodingTime = process.hrtime(decodingStart);
+      this._stats.decodingTime = 1e9 * decodingTime[0] + decodingTime[1];
+      return true;
     }
-  },
+    this.isOriginalSource = true;
+    return false;
+  }
 
-  /**
-	 * Traces a segment back to its origin
-	 * @param {number} lineIndex - the zero-based line index of the
-	   segment as found in `this`
-	 * @param {number} columnIndex - the zero-based column index of the
-	   segment as found in `this`
-	 * @param {string || null} - if specified, the name that should be
-	   (eventually) returned, as it is closest to the generated code
-	 * @returns {object}
-	     @property {string} source - the filepath of the source
-	     @property {number} line - the one-based line index
-	     @property {number} column - the zero-based column index
-	     @property {string || null} name - the name corresponding
-	     to the segment being traced
-	 */
+  loadSources(opts) {
+    assert(this.map, "Cannot load sources without a sourcemap");
+
+    const sourcesContent = this.map.sourcesContent || [];
+    const sourceRoot = resolve(
+      this.file ? dirname(this.file) : "",
+      this.map.sourceRoot || ""
+    );
+
+    this.sources = this.map.sources.map((source, i) => {
+      const node = new Node({
+        file: resolve(sourceRoot, source),
+        content: sourcesContent[i]
+      });
+      if (node.loadMappings(opts)) {
+        node.loadSources(opts);
+      }
+      return node;
+    });
+  }
+
   trace(lineIndex, columnIndex, name) {
     // If this node doesn't have a source map, we have
     // to assume it is the original source
@@ -183,16 +144,35 @@ Node.prototype = {
       this.map.names[nameIndex] || name
     );
   }
-};
+}
 
-function getContent(node, sourcesContentByPath) {
-  if (node.file in sourcesContentByPath) {
-    node.content = sourcesContentByPath[node.file];
+module.exports = Node;
+
+// Decode a Base64 string.
+function atob(base64) {
+  return new Buffer(base64, "base64").toString("utf8");
+}
+
+function parseMapUrl(str) {
+  var index, substring, url, match;
+
+  // assume we want the last occurence
+  index = str.lastIndexOf("sourceMappingURL=");
+
+  if (index === -1) {
+    return null;
   }
 
-  if (!node.content) {
-    return readFile(node.file, { encoding: "utf-8" });
+  substring = str.substring(index + 17);
+  match = /^[^\r\n]+/.exec(substring);
+
+  url = match ? match[0] : null;
+
+  // possibly a better way to do this, but we don't want to exclude whitespace
+  // from the sourceMappingURL because it might not have been correctly encoded
+  if (url && url.slice(-2) === "*/") {
+    url = url.slice(0, -2).trim();
   }
 
-  return Promise.resolve(node.content);
+  return url;
 }

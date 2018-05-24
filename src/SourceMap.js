@@ -1,26 +1,30 @@
-const btoa = require("./utils/btoa.js");
 
-function SourceMap(properties) {
-  this.version = 3;
+class SourceMap {
+  constructor(opts) {
+    this.version = 3;
 
-  this.file = properties.file;
-  this.sources = properties.sources;
-  this.sourceRoot = properties.sourceRoot;
-  this.sourcesContent = properties.sourcesContent;
-  this.names = properties.names;
-  this.mappings = properties.mappings;
-}
+    this.file = opts.file;
+    this.sources = opts.sources;
+    this.sourceRoot = opts.sourceRoot;
+    this.sourcesContent = opts.sourcesContent;
+    this.names = opts.names;
+    this.mappings = opts.mappings;
+  }
 
-module.exports = SourceMap;
-
-SourceMap.prototype = {
   toString() {
     return JSON.stringify(this);
-  },
+  }
 
   toUrl() {
     return (
       "data:application/json;charset=utf-8;base64," + btoa(this.toString())
     );
   }
-};
+}
+
+module.exports = SourceMap;
+
+// Encode a Base64 string.
+function btoa(str) {
+  return new Buffer(str).toString("base64");
+}
