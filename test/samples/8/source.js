@@ -1,1 +1,0 @@
-var datafile = 'some data';
