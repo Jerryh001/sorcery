@@ -63,6 +63,7 @@ class Node {
   }
 
   loadSources(opts) {
+    if (this.isOriginalSource) return;
     assert(this.map, "Cannot load sources without a sourcemap");
 
     const sourcesContent = this.map.sourcesContent || [];
