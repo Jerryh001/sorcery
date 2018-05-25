@@ -8,8 +8,8 @@ function sorcery(chain, opts = {}) {
   const len = chain.length;
   assert(len >= 2, "`chain` array must have 2+ values");
 
-  const file = opts.generatedFile;
-  assert(!file || !isAbsolute(file), "`generatedFile` cannot be absolute");
+  const file = opts.generatedFile || "";
+  assert(!isAbsolute(file), "`generatedFile` cannot be absolute");
 
   // Hooks into the user's file cache.
   if (!opts.readFile) opts.readFile = noop;
