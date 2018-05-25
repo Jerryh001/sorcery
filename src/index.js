@@ -54,7 +54,9 @@ function sorcery(chain, opts = {}) {
 
   return new SourceMap({
     file: generatedFile ? slash(relative(sourceRoot, generatedFile)) : null,
-    sources: sources.map(source => slash(relative(sourceRoot, source))),
+    sources: sources.map(source => {
+      return source ? slash(relative(sourceRoot, source)) : null;
+    }),
     sourceRoot: slash(sourceRoot),
     sourcesContent,
     names,
