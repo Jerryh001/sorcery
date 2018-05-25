@@ -28,15 +28,28 @@ const sourceMap = sorcery(sources, {
 ```
 
 ### Options
-- `sourceRoot: ?string` the root of all source paths in the new sourcemap
-- `generatedFile: ?string` the file that the new sourcemap accompanies
+- `sourceRoot: ?string` a relative path prepended to each source path when consumed
+- `generatedFile: ?string` where the generated file lives relative to the new sourcemap
 - `includeContent: ?boolean` whether to embed source contents in the new sourcemap (default: `true`)
 - `readFile(file)` read the contents of a file (may be a source or sourcemap)
 - `getMap(file)` get a sourcemap from your file cache
 
-The `sourceRoot` option defaults to the parent directory of either the
-`generatedFile` path or the filename of the last source in the chain.
-The working directory is used if all else fails.
+When defined, the `sourceRoot` option is assumed to be relative to the
+sourcemap's directory. When the sourcemap is consumed, the `sourceRoot`
+prepended to every path in its `sources` array.
+
+When defined, the `generatedFile` option is assumed to be relative to the
+sourcemap's directory. This option merely sets the `file` property of the
+returned `SourceMap` object. Its value should be identical to wherever you save
+the content in relation to the generated sourcemap.
+
+The `readFile` function is **required** if any source is missing its content.
+This usually occurs when a sourcemap has no `sourcesContent` property.
+It must return either a string or null.
+
+The `getMap` function must return either a JSON string, a sourcemap object, or
+null. When it's undefined (or null is returned), the generated file is parsed
+for a `sourceMappingURL` comment at the end.
 
 ## License
 

@@ -1,4 +1,4 @@
-const { dirname, resolve } = require("path");
+const { dirname, isAbsolute, join, resolve } = require("path");
 const { decode } = require("sourcemap-codec");
 const assert = require("invariant");
 
@@ -48,25 +48,37 @@ class Node {
   }
 
   loadSources(opts) {
-    if (this.isOriginalSource) return;
-    assert(this.map, "Cannot load sources without a sourcemap");
+    if (!this.isOriginalSource) {
+      const {map} = this;
+      assert(map, "Cannot load sources without a sourcemap");
 
-    const sourcesContent = this.map.sourcesContent || [];
-    const sourceRoot = resolve(
-      this.file ? dirname(this.file) : "",
-      this.map.sourceRoot || ""
-    );
-
-    this.sources = this.map.sources.map((source, i) => {
-      const node = new Node({
-        file: resolve(sourceRoot, source),
-        content: sourcesContent[i]
-      });
-      if (node.loadMappings(opts)) {
-        node.loadSources(opts);
+      let sourceRoot = map.sourceRoot || "";
+      if (map.sources[0] || map.sources.length > 1) {
+        if (this.file && !isAbsolute(sourceRoot)) {
+          // When the generated file is relative (eg: ../foo.js),
+          // we cannot easily convert `sourceRoot` into an absolute path.
+          // Instead, we have to hope the `sourcesContent` array is populated,
+          // or support relative paths in our `readFile` and `getMap` functions.
+          if (!map.file || map.file[0] !== ".") {
+            sourceRoot = join(dirname(this.file), sourceRoot);
+          }
+        }
       }
-      return node;
-    });
+
+      const sourcesContent = map.sourcesContent || [];
+      return this.sources = map.sources.map((source, i) => {
+        const file = source ? join(sourceRoot || "", source) : null;
+        const content = sourcesContent[i];
+        if (file || content != null) {
+          const node = new Node({ file, content });
+          if (node.loadMappings(opts)) {
+            node.loadSources(opts);
+          }
+          return node;
+        }
+        return null;
+      });
+    }
   }
 
   trace(lineIndex, columnIndex, name) {

@@ -1,4 +1,4 @@
-const { dirname, relative, resolve } = require("path");
+const { isAbsolute, relative } = require("path");
 const { encode } = require("sourcemap-codec");
 const SourceMap = require("./SourceMap.js");
 const assert = require("invariant");
@@ -7,6 +7,9 @@ const Node = require("./Node.js");
 function sorcery(chain, opts = {}) {
   const len = chain.length;
   assert(len >= 2, "`chain` array must have 2+ values");
+
+  const file = opts.generatedFile;
+  assert(!file || !isAbsolute(file), "`generatedFile` cannot be absolute");
 
   // Hooks into the user's file cache.
   if (!opts.readFile) opts.readFile = noop;
@@ -33,35 +36,40 @@ function sorcery(chain, opts = {}) {
     }
   }
 
-  // The last node might be generated.
-  nodes[len - 1].loadSources(opts);
+  // There's no point in creating a new sourcemap if the chain
+  // is only two nodes and one of them is the original source.
+  if (nodes[len - 1].loadSources(opts) || nodes.length > 2) {
+    const names = [];
+    const sources = [];
+    const mappings = resolveMappings(nodes[0], names, sources);
 
-  // Trace through the entire chain.
-  const names = [], sources = [];
-  const mappings = resolveMappings(nodes[0], names, sources);
+    // Include sources content by default.
+    const sourcesContent =
+      opts.includeContent !== false
+        ? sources.map(source => {
+          return source ? opts.readFile(source) : null;
+        }) : new Array(sources.length).fill(null);
 
-  const generatedFile = opts.generatedFile || nodes[0].file;
-  const sourceRoot = opts.sourceRoot
-    ? resolve(opts.sourceRoot)
-    : generatedFile
-      ? dirname(generatedFile)
-      : process.cwd();
+    let sourceRoot = "";
+    if (sources[0] || sources.length > 1) {
+      sourceRoot = slash(opts.sourceRoot || "");
+      assert(!isAbsolute(sourceRoot), "`sourceRoot` cannot be absolute");
+    }
 
-  const includeContent = opts.includeContent !== false;
-  const sourcesContent = sources.map(
-    includeContent ? opts.readFile : () => null
-  );
+    return new SourceMap({
+      file,
+      sources: sources.map(source => {
+        return source ? relative(sourceRoot, slash(source)) : null;
+      }),
+      sourceRoot,
+      sourcesContent,
+      names,
+      mappings
+    });
+  }
 
-  return new SourceMap({
-    file: generatedFile ? slash(relative(sourceRoot, generatedFile)) : null,
-    sources: sources.map(source => {
-      return source ? slash(relative(sourceRoot, source)) : null;
-    }),
-    sourceRoot: slash(sourceRoot),
-    sourcesContent,
-    names,
-    mappings
-  });
+  // There's nothing to trace.
+  return new SourceMap(nodes[0].map);
 }
 
 module.exports = sorcery;
