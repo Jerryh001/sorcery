@@ -22,21 +22,15 @@ function sorcery(chain, opts = {}) {
       content: source.content || source,
     });
 
-    if (source.map) {
-      node.isOriginalSource = false;
-      node.map = typeof source.map == "string"
-        ? JSON.parse(source.map)
-        : source.map;
-    } else {
-      node.loadMappings(opts);
-    }
+    node.map = source.map || null;
+    node.loadMappings(opts);
+    nodes[i] = node;
 
     const parent = nodes[i + 1];
     if (parent) {
       assert(node.map, "Only the last source can have no sourcemap");
       node.sources = [parent];
     }
-    nodes[i] = node;
   }
 
   // The last node might be generated.

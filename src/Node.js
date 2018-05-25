@@ -12,26 +12,16 @@ class Node {
     this.map = null;
     this.mappings = null;
     this.sources = null;
-    this.isOriginalSource = null;
-
-    this._stats = {
-      decodingTime: 0,
-      encodingTime: 0,
-      tracingTime: 0,
-
-      untraceable: 0
-    };
+    this.isOriginalSource = false;
   }
 
   loadMappings(opts) {
-    let map = opts.getMap(this.file) || null;
-    if (typeof map == "string") {
-      map = JSON.parse(map);
-    } else if (map == null) {
+    let map = this.map || opts.getMap(this.file);
+    if (map == null) {
       if (this.content == null) {
         this.content = opts.readFile(this.file);
         if (this.content == null) {
-          throw Error(`Source does not exist: '${this.file}'`);
+          throw new Error(`Source does not exist: '${this.file}'`);
         }
       }
       const url = parseMapUrl(this.content);
@@ -39,23 +29,18 @@ class Node {
         if (/^data:/.test(url)) {
           const match = /;base64,([+a-z/0-9]+)$/.exec(url);
           assert(match, "Sourcemap URL is not base64-encoded");
-          map = JSON.parse(atob(match[1]));
-        } else {
-          const file = resolve(dirname(this.file), decodeURI(url));
-          map = opts.readFile(file);
-          if (map == null) {
-            throw Error(`Sourcemap does not exist: '${file}'`);
-          }
-          map = JSON.parse(map);
+          map = atob(match[1]);
+        } else if (this.file) {
+          map = opts.readFile(resolve(dirname(this.file), decodeURI(url)));
         }
       }
     }
-    if (map) {
+    if (map != null) {
+      if (typeof map == "string") {
+        map = JSON.parse(map);
+      }
       this.map = map;
-      const decodingStart = process.hrtime();
       this.mappings = decode(map.mappings);
-      const decodingTime = process.hrtime(decodingStart);
-      this._stats.decodingTime = 1e9 * decodingTime[0] + decodingTime[1];
       return true;
     }
     this.isOriginalSource = true;
