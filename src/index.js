@@ -5,9 +5,6 @@ const assert = require("invariant");
 const Node = require("./Node.js");
 
 function sorcery(chain, opts = {}) {
-  const len = chain.length;
-  assert(len >= 2, "`chain` array must have 2+ values");
-
   const file = opts.generatedFile || "";
   assert(!isAbsolute(file), "`generatedFile` cannot be absolute");
 
@@ -15,6 +12,11 @@ function sorcery(chain, opts = {}) {
   if (!opts.readFile) opts.readFile = noop;
   if (!opts.getMap) opts.getMap = noop;
 
+  if (!Array.isArray(chain)) {
+    chain = [chain];
+  }
+
+  const len = chain.length;
   const nodes = new Array(len);
 
   // Process the chain in reverse order.
