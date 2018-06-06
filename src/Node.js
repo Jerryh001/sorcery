@@ -35,7 +35,7 @@ class Node {
         }
       }
     }
-    if (map != null) {
+    if (map) {
       if (typeof map == "string") {
         map = JSON.parse(map);
       }
