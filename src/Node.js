@@ -46,6 +46,8 @@ class Node {
       this.mappings = decode(map.mappings);
       return true;
     }
+
+    // Mark this node as the original since no sourcemap exists.
     this.isOriginalSource = true;
     return false;
   }
@@ -70,20 +72,30 @@ class Node {
         }
       }
 
-      const sourcesContent = map.sourcesContent || [];
-      return this.sources = map.sources.map((source, i) => {
-        const file = source ? join(sourceRoot || "", source) : null;
+      let k = 0; // number of known sources
+      let sourcesContent = map.sourcesContent || [];
+      this.sources = map.sources.map((source, i) => {
+        const file = source ? join(sourceRoot, source) : null;
         const content = sourcesContent[i];
         if (file || content != null) {
           const node = new Node({ file, content });
           if (node.loadMappings(opts)) {
             node.loadSources(opts);
           }
+          k += 1;
           return node;
         }
         return null;
       });
+
+      if (k !== 0) {
+        return true;
+      }
+
+      // Mark this node as the original, since no source nodes exist.
+      this.isOriginalSource = true;
     }
+    return false;
   }
 
   trace(lineIndex, columnIndex, name) {
