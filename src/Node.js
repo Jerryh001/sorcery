@@ -1,4 +1,4 @@
-const { dirname, isAbsolute, join, resolve } = require("path");
+const { dirname, isAbsolute, join } = require("path");
 const { decode } = require("sourcemap-codec");
 
 class Node {
@@ -7,7 +7,7 @@ class Node {
       throw new Error("Sources must have a `file` path or `content` string");
     }
 
-    this.file = opts.file ? resolve(opts.file) : null;
+    this.file = opts.file || null;
     this.content = opts.content;
 
     this.map = null;
@@ -34,7 +34,7 @@ class Node {
           }
           map = atob(match[1]);
         } else if (this.file) {
-          map = opts.readFile(resolve(dirname(this.file), decodeURI(url)));
+          map = opts.readFile(join(dirname(this.file), decodeURI(url)));
         }
       }
     }
