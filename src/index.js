@@ -1,12 +1,13 @@
 const { isAbsolute, relative } = require("path");
 const { encode } = require("sourcemap-codec");
 const SourceMap = require("./SourceMap.js");
-const assert = require("invariant");
 const Node = require("./Node.js");
 
 function sorcery(chain, opts = {}) {
   const file = opts.generatedFile || "";
-  assert(!isAbsolute(file), "`generatedFile` cannot be absolute");
+  if (isAbsolute(file)) {
+    throw new Error("`generatedFile` cannot be absolute");
+  }
 
   // Hooks into the user's file cache.
   if (!opts.readFile) opts.readFile = noop;
@@ -33,7 +34,9 @@ function sorcery(chain, opts = {}) {
 
     const parent = nodes[i + 1];
     if (parent) {
-      assert(node.map, "Only the last source can have no sourcemap");
+      if (!node.map) {
+        throw new Error("Only the last source can have no sourcemap");
+      }
       node.sources = [parent];
     }
   }
@@ -55,7 +58,9 @@ function sorcery(chain, opts = {}) {
     let sourceRoot = "";
     if (sources[0] || sources.length > 1) {
       sourceRoot = slash(opts.sourceRoot || "");
-      assert(!isAbsolute(sourceRoot), "`sourceRoot` cannot be absolute");
+      if (isAbsolute(sourceRoot)) {
+        throw new Error("`sourceRoot` cannot be absolute");
+      }
     }
 
     return new SourceMap({

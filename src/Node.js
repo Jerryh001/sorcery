@@ -1,10 +1,11 @@
 const { dirname, isAbsolute, join, resolve } = require("path");
 const { decode } = require("sourcemap-codec");
-const assert = require("invariant");
 
 class Node {
   constructor(opts) {
-    assert(opts.file || opts.content != null, "Sources must have a `file` path or `content` string");
+    if (!opts.file && opts.content == null) {
+      throw new Error("Sources must have a `file` path or `content` string");
+    }
 
     this.file = opts.file ? resolve(opts.file) : null;
     this.content = opts.content;
@@ -28,7 +29,9 @@ class Node {
       if (url) {
         if (/^data:/.test(url)) {
           const match = /;base64,([+a-z/0-9]+)$/.exec(url);
-          assert(match, "Sourcemap URL is not base64-encoded");
+          if (!match) {
+            throw new Error("Sourcemap URL is not base64-encoded");
+          }
           map = atob(match[1]);
         } else if (this.file) {
           map = opts.readFile(resolve(dirname(this.file), decodeURI(url)));
@@ -50,7 +53,9 @@ class Node {
   loadSources(opts) {
     if (!this.isOriginalSource) {
       const {map} = this;
-      assert(map, "Cannot load sources without a sourcemap");
+      if (!map) {
+        throw new Error("Cannot load sources without a sourcemap");
+      }
 
       let sourceRoot = map.sourceRoot || "";
       if (map.sources[0] || map.sources.length > 1) {
