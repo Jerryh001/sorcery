@@ -13,7 +13,6 @@ class Node {
     this.map = null;
     this.mappings = null;
     this.sources = null;
-    this.isOriginalSource = false;
   }
 
   loadMappings(opts) {
@@ -46,19 +45,12 @@ class Node {
       this.mappings = decode(map.mappings);
       return true;
     }
-
-    // Mark this node as the original since no sourcemap exists.
-    this.isOriginalSource = true;
     return false;
   }
 
   loadSources(opts) {
-    if (!this.isOriginalSource) {
-      const {map} = this;
-      if (!map) {
-        throw new Error("Cannot load sources without a sourcemap");
-      }
-
+    const {map} = this;
+    if (map) {
       let sourceRoot = map.sourceRoot || "";
       if (map.sources[0] || map.sources.length > 1) {
         if (this.file && !isAbsolute(sourceRoot)) {
@@ -72,36 +64,24 @@ class Node {
         }
       }
 
-      let k = 0; // number of known sources
-      let sourcesContent = map.sourcesContent || [];
-      this.sources = map.sources.map((source, i) => {
+      const sourcesContent = map.sourcesContent || [];
+      return this.sources = map.sources.map((source, i) => {
         const file = source ? join(sourceRoot, source) : null;
         const content = sourcesContent[i];
         if (file || content != null) {
           const node = new Node({ file, content });
-          if (node.loadMappings(opts)) {
-            node.loadSources(opts);
-          }
-          k += 1;
+          node.loadMappings(opts) && node.loadSources(opts);
           return node;
         }
         return null;
       });
-
-      if (k !== 0) {
-        return true;
-      }
-
-      // Mark this node as the original, since no source nodes exist.
-      this.isOriginalSource = true;
     }
-    return false;
+    return null;
   }
 
   trace(lineIndex, columnIndex, name) {
-    // If this node doesn't have a source map, we have
-    // to assume it is the original source
-    if (this.isOriginalSource) {
+    // Tracing is not possible without a sourcemap.
+    if (!this.map) {
       return {
         source: this.file,
         line: lineIndex + 1,
@@ -113,51 +93,44 @@ class Node {
     // Otherwise, we need to figure out what this position in
     // the intermediate file corresponds to in *its* source
     const segments = this.mappings[lineIndex];
-
     if (!segments || segments.length === 0) {
       return null;
     }
 
+    let segment = segments[0];
+    let sourceColumn = null;
+
+    // Hi-res column mapping
     if (columnIndex != null) {
-      let len = segments.length;
-      let i;
-
-      for (i = 0; i < len; i += 1) {
-        let generatedCodeColumn = segments[i][0];
-
-        if (generatedCodeColumn > columnIndex) {
-          break;
+      let i = 0, len = segments.length;
+      while (segment[0] <= columnIndex) {
+        if (segment[0] === columnIndex) {
+          sourceColumn = segment[3];
+          break; // The source column was found.
         }
-
-        if (generatedCodeColumn === columnIndex) {
-          if (segments[i].length < 4) return null;
-
-          let sourceFileIndex = segments[i][1];
-          let sourceCodeLine = segments[i][2];
-          let sourceCodeColumn = segments[i][3];
-          let nameIndex = segments[i][4];
-
-          let parent = this.sources[sourceFileIndex];
-          return parent.trace(
-            sourceCodeLine,
-            sourceCodeColumn,
-            this.map.names[nameIndex] || name
-          );
-        }
+        if (++i < len) {
+          segment = segments[i];
+        } else break;
+      }
+      if (i !== 0 && sourceColumn === null) {
+        segment = segments[0];
       }
     }
 
-    // fall back to a line mapping
-    let sourceFileIndex = segments[0][1];
-    let sourceCodeLine = segments[0][2];
-    let nameIndex = segments[0][4];
-
-    let parent = this.sources[sourceFileIndex];
-    return parent.trace(
-      sourceCodeLine,
-      null,
-      this.map.names[nameIndex] || name
-    );
+    if (segment.length >= 4) {
+      const parent = this.sources[segment[1]];
+      return parent ? parent.trace(
+        segment[2],
+        sourceColumn,
+        this.map.names[segment[4]] || name
+      ) : {
+        source: this.file,
+        line: segment[2] + 1,
+        column: sourceColumn || 0,
+        name: this.map.names[segment[4]] || name
+      };
+    }
+    return null;
   }
 }
 
