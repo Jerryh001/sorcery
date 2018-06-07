@@ -9,41 +9,12 @@ function sorcery(chain, opts = {}) {
     throw new Error("`generatedFile` cannot be absolute");
   }
 
-  // Hooks into the user's file cache.
-  if (!opts.readFile) opts.readFile = noop;
-  if (!opts.getMap) opts.getMap = noop;
-
-  if (!Array.isArray(chain)) {
-    chain = [chain];
-  }
-
-  const len = chain.length;
-  const nodes = new Array(len);
-
-  // Process the chain in reverse order.
-  for (let i = len - 1; i >= 0; i--) {
-    const source = chain[i];
-    const node = new Node({
-      file: source.file,
-      content: source.content || source,
-    });
-
-    node.map = source.map || null;
-    node.loadMappings(opts);
-    nodes[i] = node;
-
-    const parent = nodes[i + 1];
-    if (parent) {
-      if (!node.map) {
-        throw new Error("Only the last source can have no sourcemap");
-      }
-      node.sources = [parent];
-    }
-  }
+  const nodes = load(chain, opts);
+  const last = nodes[nodes.length - 1];
 
   // There's no point in creating a new sourcemap if the chain
   // is only two nodes and one of them is the original source.
-  if (nodes[len - 1].loadSources(opts) || nodes.length > 2) {
+  if (last.sources || nodes.length > 2) {
     const names = [];
     const sources = [];
     const mappings = resolveMappings(nodes[0], names, sources);
@@ -79,7 +50,51 @@ function sorcery(chain, opts = {}) {
   return new SourceMap(nodes[0].map);
 }
 
+// Return the youngest node with loaded sources.
+sorcery.load = function(chain, opts) {
+  return load(chain, opts || {})[0];
+};
+
 module.exports = sorcery;
+
+function load(chain, opts) {
+  if (!Array.isArray(chain)) {
+    chain = [chain];
+  }
+
+  // Hooks into the user's file cache.
+  if (!opts.readFile) opts.readFile = noop;
+  if (!opts.getMap) opts.getMap = noop;
+
+  const len = chain.length;
+  const nodes = new Array(len);
+
+  // Process the chain in reverse order.
+  for (let i = len - 1; i >= 0; i--) {
+    const source = chain[i];
+    const node = new Node({
+      file: source.file,
+      content: source.content || source,
+    });
+
+    node.map = source.map || null;
+    node.loadMappings(opts);
+    nodes[i] = node;
+
+    const parent = nodes[i + 1];
+    if (parent) {
+      if (!node.map) {
+        throw new Error("Only the last source can have no sourcemap");
+      }
+      node.sources = [parent];
+    }
+  }
+
+  // Load the sources of the last node.
+  nodes[len - 1].loadSources(opts);
+
+  return nodes;
+}
 
 // Where the magic happens.
 function resolveMappings(node, names, sources) {
