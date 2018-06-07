@@ -27,7 +27,7 @@ class Node {
       const url = parseMapUrl(this.content);
       if (url) {
         if (/^data:/.test(url)) {
-          const match = /;base64,([+a-z/0-9]+)$/.exec(url);
+          const match = /;base64,([+a-z/0-9]+={0,2})$/i.exec(url);
           if (!match) {
             throw new Error("Sourcemap URL is not base64-encoded");
           }
