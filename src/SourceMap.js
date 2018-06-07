@@ -26,5 +26,5 @@ module.exports = SourceMap;
 
 // Encode a Base64 string.
 function btoa(str) {
-  return new Buffer(str).toString("base64");
+  return Buffer.from(str).toString("base64");
 }
