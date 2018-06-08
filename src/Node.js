@@ -2,13 +2,12 @@ const { dirname, isAbsolute, join } = require("path");
 const { decode } = require("sourcemap-codec");
 
 class Node {
-  constructor(opts) {
-    if (!opts.file && opts.content == null) {
+  constructor(file, content) {
+    if (!file && content == null) {
       throw new Error("Sources must have a `file` path or `content` string");
     }
-
-    this.file = opts.file || null;
-    this.content = opts.content;
+    this.file = typeof file === "string" ? file : null;
+    this.content = typeof content === "string" ? content : null;
 
     this.map = null;
     this.mappings = null;
@@ -69,7 +68,7 @@ class Node {
         const file = source ? join(sourceRoot, source) : null;
         const content = sourcesContent[i];
         if (file || content != null) {
-          const node = new Node({ file, content });
+          const node = new Node(file, content);
           node.loadMappings(opts) && node.loadSources(opts);
           return node;
         }

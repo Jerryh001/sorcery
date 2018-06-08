@@ -72,10 +72,7 @@ function load(chain, opts) {
   // Process the chain in reverse order.
   for (let i = len - 1; i >= 0; i--) {
     const source = chain[i];
-    const node = new Node({
-      file: source.file,
-      content: source.content || source,
-    });
+    const node = new Node(source.file, source.content || source);
 
     node.map = source.map || null;
     node.loadMappings(opts);
