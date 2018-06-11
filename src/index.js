@@ -50,7 +50,7 @@ function sorcery(chain, opts = {}) {
   return new SourceMap(nodes[0].map);
 }
 
-// Return the youngest node with loaded sources.
+// Return the eldest node with its sources loaded.
 sorcery.load = function(chain, opts) {
   return load(chain, opts || {})[0];
 };
@@ -108,7 +108,9 @@ function resolveMappings(node, names, sources) {
         const traced = node.sources[segment[1]].trace(
           segment[2], // source code line
           segment[3], // source code column
-          node.map.names[segment[4]]
+          segment.length == 5
+            ? node.map.names[segment[4]]
+            : null
         );
         if (traced) {
           let sourceIndex = sources.indexOf(traced.source);

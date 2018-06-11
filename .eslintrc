@@ -8,6 +8,7 @@
         "space-before-blocks": [ 2, "always" ],
         "space-before-function-paren": [ 2, "never" ],
         "no-mixed-spaces-and-tabs": [ 2 ],
+        "no-constant-condition": [ 0 ],
         "no-cond-assign": [ 0 ]
     },
     "env": {

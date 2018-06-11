@@ -65,9 +65,9 @@ class Node {
 
       const sourcesContent = map.sourcesContent || [];
       return this.sources = map.sources.map((source, i) => {
-        const file = source ? join(sourceRoot, source) : null;
         const content = sourcesContent[i];
-        if (file || content != null) {
+        if (source || content != null) {
+          const file = source ? join(sourceRoot, source) : null;
           const node = new Node(file, content);
           node.loadMappings(opts) && node.loadSources(opts);
           return node;
@@ -89,8 +89,7 @@ class Node {
       };
     }
 
-    // Otherwise, we need to figure out what this position in
-    // the intermediate file corresponds to in *its* source
+    // Trace the position from this intermediate file to its source.
     const segments = this.mappings[lineIndex];
     if (!segments || segments.length === 0) {
       return null;
@@ -101,19 +100,27 @@ class Node {
 
     // Hi-res column mapping
     if (columnIndex != null) {
-      let i = 0, len = segments.length;
-      while (segment[0] <= columnIndex) {
+      let i = 0, last = segments.length - 1;
+      while (true) {
         if (segment[0] === columnIndex) {
           sourceColumn = segment[3];
-          break; // The source column was found.
+          if (segment.length === 5) {
+            // Retain symbol names from earlier source maps.
+            name = this.map.names[segment[4]];
+          }
+          break;
         }
-        if (++i < len) {
-          segment = segments[i];
-        } else break;
+        if (i === last || segment[0] > columnIndex) {
+          if (i !== 0) segment = segments[0];
+          break;
+        }
+        segment = segments[++i];
       }
-      if (i !== 0 && sourceColumn === null) {
-        segment = segments[0];
-      }
+    }
+
+    // Forget symbol names without a column index.
+    if (sourceColumn === null) {
+      name = null;
     }
 
     if (segment.length >= 4) {
@@ -121,12 +128,12 @@ class Node {
       return parent ? parent.trace(
         segment[2],
         sourceColumn,
-        this.map.names[segment[4]] || name
+        name
       ) : {
         source: this.file,
         line: segment[2] + 1,
         column: sourceColumn || 0,
-        name: this.map.names[segment[4]] || name
+        name: name
       };
     }
     return null;
