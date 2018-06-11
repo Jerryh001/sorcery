@@ -14,7 +14,7 @@ function sorcery(chain, opts = {}) {
 
   // There's no point in creating a new sourcemap if the chain
   // is only two nodes and one of them is the original source.
-  if (last.sources || nodes.length > 2) {
+  if (last.map || nodes.length > 2) {
     const names = [];
     const sources = [];
     const mappings = resolveMappings(nodes[0], names, sources);
