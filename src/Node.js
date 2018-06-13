@@ -83,67 +83,6 @@ class Node {
     }
     return false;
   }
-
-  trace(lineIndex, columnIndex, name) {
-    // Tracing is not possible without a sourcemap.
-    if (!this.map) {
-      return {
-        source: this.file,
-        line: lineIndex + 1,
-        column: columnIndex || 0,
-        name: name
-      };
-    }
-
-    // Trace the position from this intermediate file to its source.
-    const segments = this.mappings[lineIndex];
-    if (!segments || segments.length === 0) {
-      return null;
-    }
-
-    let segment = segments[0];
-    let sourceColumn = null;
-
-    // Hi-res column mapping
-    if (columnIndex != null) {
-      let i = 0, last = segments.length - 1;
-      while (true) {
-        if (segment[0] === columnIndex) {
-          sourceColumn = segment[3];
-          if (segment.length === 5) {
-            // Retain symbol names from earlier source maps.
-            name = this.map.names[segment[4]];
-          }
-          break;
-        }
-        if (i === last || segment[0] > columnIndex) {
-          if (i !== 0) segment = segments[0];
-          break;
-        }
-        segment = segments[++i];
-      }
-    }
-
-    // Forget symbol names without a column index.
-    if (sourceColumn === null) {
-      name = null;
-    }
-
-    if (segment.length >= 4) {
-      const parent = this.sources[segment[1]];
-      return parent ? parent.trace(
-        segment[2],
-        sourceColumn,
-        name
-      ) : {
-        source: this.file,
-        line: segment[2] + 1,
-        column: sourceColumn || 0,
-        name: name
-      };
-    }
-    return null;
-  }
 }
 
 module.exports = Node;
