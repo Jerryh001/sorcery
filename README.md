@@ -51,6 +51,17 @@ The `getMap` function must return either a JSON string, a sourcemap object, or
 null. When it's undefined (or null is returned), the generated file is parsed
 for a `sourceMappingURL` comment at the end.
 
+## `sorcery.portal`
+
+The `portal` function takes the same arguments as `sorcery`, but it returns a `trace` function instead of a `SourceMap` object.
+
+The returned function traces a `(line: number, column: number)` pair to its original source. It returns an object (or null if the pair is untraceable) which has the following properties:
+
+- `source: ?string` the original filename
+- `line: number` the original line
+- `column: number` the original column
+- `name: ?string` the original identifier
+
 ## License
 
 MIT
