@@ -3,7 +3,7 @@ const emptyArray = [];
 // NOTE: This function mutates the given node.
 module.exports = function blend(node) {
   let mappings = []; // traced lines
-  let files = [];    // traced filenames
+  let sources = [];  // traced sources
   let names = [];    // traced symbols
 
   let traced;     // the traced line mapping
@@ -11,7 +11,7 @@ module.exports = function blend(node) {
 
   function addSegment(segment, source) {
     if (source) {
-      segment[1] = uniq(files, source.files[segment[1]]);
+      segment[1] = uniq(sources, source.sources[segment[1]]);
       if (segment.length === 5) {
         segment[4] = uniq(names, source.names[segment[4]]);
       }
@@ -98,11 +98,11 @@ module.exports = function blend(node) {
 
       const source = node.sources[sourceIndex];
       if (source === null) {
-        curr[1] = uniq(files, null);
+        curr[1] = uniq(sources, null);
         return addSegment(curr);
       }
       if (source.map === null) {
-        curr[1] = uniq(files, source.file);
+        curr[1] = uniq(sources, source);
         return addSegment(curr);
       }
 
@@ -122,14 +122,14 @@ module.exports = function blend(node) {
         const prev = segments[j];
 
         // Assume the source of the preceding segment.
-        curr[1] = uniq(files, source.files[prev[1]]);
+        curr[1] = uniq(sources, source.sources[prev[1]]);
 
         // Align with the preceding segment.
         curr[2] = prev[2];
         curr[3] = prev[3] + sourceColumn - prev[0];
       } else {
         // The grand-parent source is unknown without a preceding segment.
-        curr[1] = uniq(files, null);
+        curr[1] = uniq(sources, null);
       }
 
       addSegment(curr);
@@ -148,7 +148,7 @@ module.exports = function blend(node) {
   fillSkippedLines();
 
   node.mappings = mappings;
-  node.files = files;
+  node.sources = sources;
   node.names = names;
   return node;
 };

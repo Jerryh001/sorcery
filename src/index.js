@@ -19,12 +19,12 @@ function sorcery(chain, opts = {}) {
   // Include sources content by default.
   const sourcesContent =
     opts.includeContent !== false
-      ? main.files.map(file => {
-        return file ? opts.readFile(file) : null;
-      }) : new Array(main.files.length).fill(null);
+      ? main.sources.map(source =>
+        source && (source.content || opts.readFile(source.file)) || null)
+      : new Array(main.sources.length).fill(null);
 
   let sourceRoot = "";
-  if (main.files[0] || main.files.length > 1) {
+  if (main.sources[0] || main.sources.length > 1) {
     sourceRoot = slash(opts.sourceRoot || "");
     if (isAbsolute(sourceRoot)) {
       throw new Error("`sourceRoot` cannot be absolute");
@@ -33,9 +33,8 @@ function sorcery(chain, opts = {}) {
 
   return new SourceMap({
     file,
-    sources: main.files.map(file => {
-      return file ? relative(sourceRoot, slash(file)) : null;
-    }),
+    sources: main.sources.map(source =>
+      source && source.file ? relative(sourceRoot, slash(source.file)) : null),
     sourceRoot,
     sourcesContent,
     names: main.names,
@@ -96,7 +95,6 @@ function trace(node) {
       if (trace(source)) skip = false;
     });
     if (skip) {
-      node.files = node.map.sources;
       node.names = node.map.names;
     } else blend(node);
     return node;
