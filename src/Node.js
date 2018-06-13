@@ -18,11 +18,11 @@ class Node {
   loadMappings(opts) {
     let map = this.map || opts.getMap(this.file);
     if (map == null) {
-      if (this.content == null) {
-        this.content = opts.readFile(this.file);
-        if (this.content == null) {
-          throw new Error(`Source does not exist: '${this.file}'`);
-        }
+      if (this.content === null) {
+        const content = opts.readFile(this.file);
+        if (typeof content === "string") {
+          this.content = content;
+        } else return false;
       }
       const url = parseMapUrl(this.content);
       if (url) {
