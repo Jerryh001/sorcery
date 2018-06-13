@@ -12,6 +12,7 @@ class Node {
     this.map = null;
     this.mappings = null;
     this.sources = null;
+    this.final = null; // `true` when all sources are null
   }
 
   loadMappings(opts) {
@@ -64,18 +65,23 @@ class Node {
       }
 
       const sourcesContent = map.sourcesContent || [];
-      return this.sources = map.sources.map((source, i) => {
+
+      let final = true;
+      this.sources = map.sources.map((source, i) => {
         const content = sourcesContent[i];
         if (source || content != null) {
           const file = source ? join(sourceRoot, source) : null;
           const node = new Node(file, content);
-          node.loadMappings(opts) && node.loadSources(opts);
+          if (node.loadMappings(opts)) node.loadSources(opts);
+          if (node.map) final = false;
           return node;
         }
         return null;
       });
+      this.final = final;
+      return true;
     }
-    return null;
+    return false;
   }
 
   trace(lineIndex, columnIndex, name) {
