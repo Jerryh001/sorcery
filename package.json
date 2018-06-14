@@ -5,11 +5,19 @@
   "repository": "https://github.com/aleclarson/sorcery",
   "main": "src/index.js",
   "license": "MIT",
-  "dependencies": {
-    "sourcemap-codec": "^1.3.0"
-  },
   "files": [
     "src/",
     "README.md"
-  ]
+  ],
+  "dependencies": {
+    "sourcemap-codec": "^1.3.0"
+  },
+  "devDependencies": {
+    "chalk": "^2.4.1",
+    "magic-string": "^0.25.0",
+    "stringy": "aleclarson/stringy#0.0.3"
+  },
+  "scripts": {
+    "test": "./test"
+  }
 }
