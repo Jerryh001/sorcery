@@ -127,7 +127,13 @@ module.exports = function blend(node) {
         // Align with the preceding segment.
         curr[2] = prev[2];
         curr[3] = prev[3] + sourceColumn - prev[0];
-      } else {
+
+        // Assume the name of the preceding segment.
+        if (prev[0] === sourceColumn && prev.length === 5) {
+          curr[4] = uniq(names, source.names[prev[4]]);
+        }
+      }
+      else {
         // The grand-parent source is unknown without a preceding segment.
         curr[1] = uniq(sources, null);
       }
