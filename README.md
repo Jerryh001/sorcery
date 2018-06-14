@@ -20,7 +20,7 @@ const sourceMap = sorcery(sources, {
   readFile(file) {
     return cache[file].read();
   },
-  // Return a string, object, or null for sourcemap requests.
+  // Return a string, object, false, or null for sourcemap requests.
   getMap(file) {
     return cache[file].sourceMap;
   }
@@ -48,19 +48,28 @@ This usually occurs when a sourcemap has no `sourcesContent` property.
 It must return either a string or null.
 
 The `getMap` function must return either a JSON string, a sourcemap object, or
-null. When it's undefined (or null is returned), the generated file is parsed
-for a `sourceMappingURL` comment at the end.
+null. If this option is undefined (or you return null), the generated file is
+parsed for a `sourceMappingURL` comment at the end. If you already know that
+a file has no sourcemap, you should return false to avoid extra work.
 
 ## `sorcery.portal`
 
-The `portal` function takes the same arguments as `sorcery`, but it returns a `trace` function instead of a `SourceMap` object.
+The `portal` function takes the same arguments as `sorcery`, but it returns a
+`trace` function instead of a `SourceMap` object.
 
-The returned function traces a `(line: number, column: number)` pair to its original source. It returns an object (or null if the pair is untraceable) which has the following properties:
+The returned function traces a `(line: number, column: number)` pair to its
+original source. It returns an object (or null if the pair is untraceable)
+which has the following properties:
 
 - `source: ?string` the original filename
 - `line: number` the original line
 - `column: number` the original column
 - `name: ?string` the original identifier
+
+```js
+const trace = sorcery.portal(chain, options);
+trace(0 /* zero-based line */, 0 /* zero-based column */); // {source, line, column, name} || null
+```
 
 ## License
 
