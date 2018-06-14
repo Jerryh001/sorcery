@@ -6,6 +6,23 @@ module.exports = function blend(node) {
   let sources = [];  // traced sources
   let names = [];    // traced symbols
 
+  // Precompute which source/line/column triples are mapped by the given node.
+  // These references are useful when interweaving old segments.
+  const refs = Object.keys(node.sources).map(() => []);
+  node.mappings.forEach(segments => {
+    let segment, lines, columns;
+    for (let i = 0; i < segments.length; i++) {
+      segment = segments[i];
+
+      lines = refs[segment[1]];
+      if (!lines) refs[segment[1]] = lines = [];
+
+      columns = lines[segment[2]];
+      if (columns) columns.push(segment[3]);
+      else lines[segment[2]] = [segment[3]];
+    }
+  });
+
   let traced;     // the traced line mapping
   let untraced;   // the untraced line mapping
 
@@ -45,19 +62,29 @@ module.exports = function blend(node) {
       // Take line mappings from the current source.
       if (sourceIndex !== -1) {
         const source = node.sources[sourceIndex];
-        if (source && source.map) while (line < generatedLine - 1) {
-          if (++sourceLine !== source.mappings.length) {
-            mappings[++line] = traced = [];
+        if (source && source.map) {
+          while (line < generatedLine - 1) {
+            if (++sourceLine !== source.mappings.length) {
+              mappings[++line] = traced = [];
 
-            // Copy the segments of this source line.
-            const segments = source.mappings[sourceLine];
-            for (let i = 0; i < segments.length; i++) {
-              addSegment(segments[i].slice(0), source);
+              // Check referenced columns to avoid duplicate segments.
+              const columns = refs[sourceIndex][sourceLine] || emptyArray;
+              let prevColumn = -1;
+
+              // Interweave old segments from the current source.
+              const segments = source.mappings[sourceLine];
+              for (let i = 0; i < segments.length; i++) {
+                const segment = segments[i];
+                if (!hasValueBetween(columns, prevColumn, segment[0] + 1)) {
+                  addSegment(segment.slice(0), source);
+                  prevColumn = segment[0];
+                } else break;
+              }
             }
-          }
-          else { // End of source file.
-            sourceIndex = -1;
-            break;
+            else { // End of source file.
+              sourceIndex = -1;
+              break;
+            }
           }
         }
       }
@@ -75,7 +102,7 @@ module.exports = function blend(node) {
     // Trace the segments of this generated line.
     mappings[generatedLine] = traced = [];
 
-    // Copy parent segments that precede the first source column.
+    // Interweave old segments before the first mapped column of each line.
     const sourceColumn = untraced[0][3];
     if (sourceIndex !== -1 && sourceColumn !== 0) {
       const source = node.sources[sourceIndex];
@@ -118,35 +145,36 @@ module.exports = function blend(node) {
         if (segments[j][0] > sourceColumn) break;
       }
 
+      // A "base segment" is required for tracing to a grand-parent.
+      let base;
       if (--j !== -1) {
-        const prev = segments[j];
-
-        // Assume the source of the preceding segment.
-        curr[1] = uniq(sources, source.sources[prev[1]]);
-
-        // Align with the preceding segment.
-        curr[2] = prev[2];
-        curr[3] = prev[3] + sourceColumn - prev[0];
-
-        // Assume the name of the preceding segment.
-        if (prev[0] === sourceColumn && prev.length === 5) {
-          curr[4] = uniq(names, source.names[prev[4]]);
+        base = segments[j];
+        curr[1] = uniq(sources, source.sources[base[1]]);
+        curr[2] = base[2];
+        curr[3] = base[3] + sourceColumn - base[0];
+        if (base[0] === sourceColumn && base.length === 5) {
+          curr[4] = uniq(names, source.names[base[4]]);
         }
-      }
-      else {
-        // The grand-parent source is unknown without a preceding segment.
+      } else {
         curr[1] = uniq(sources, null);
       }
 
       addSegment(curr);
 
-      // Copy old segments between our current and next segments.
+      // Check referenced columns to avoid duplicate segments.
+      const columns = refs[sourceIndex][sourceLine] || emptyArray;
+      let prevColumn = base ? base[0] : -1;
+
+      // Interweave old segments between our current and next segments.
       while (++j < segments.length) {
         let segment = segments[j];
         if (!next || sourceLine !== next[2] || segment[0] < next[3]) {
-          segment = segment.slice(0);
-          segment[0] += (generatedColumn - sourceColumn);
-          addSegment(segment, source);
+          if (!hasValueBetween(columns, prevColumn, segment[0] + 1)) {
+            segment = segment.slice(0);
+            segment[0] += (generatedColumn - sourceColumn);
+            addSegment(segment, source);
+            prevColumn = segment[0];
+          } else break;
         } else break;
       }
     });
@@ -164,4 +192,21 @@ module.exports = function blend(node) {
 function uniq(arr, val) {
   const i = arr.indexOf(val);
   return ~i ? i : arr.push(val) - 1;
+}
+
+// The range is exclusive.
+function hasValueBetween(vals, start, end) {
+  let low = 0, high = vals.length;
+  while (low < high) {
+    const i = (low + high) >>> 1;
+    const val = vals[i];
+    if (val <= start) {
+      low = i + 1;
+    } else if (val >= end) {
+      high = i;
+    } else {
+      return true;
+    }
+  }
+  return false;
 }
