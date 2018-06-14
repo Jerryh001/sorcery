@@ -143,7 +143,7 @@ module.exports = function blend(node) {
       // Copy old segments between our current and next segments.
       while (++j < segments.length) {
         let segment = segments[j];
-        if (!next || segment[0] < next[3]) {
+        if (!next || sourceLine !== next[2] || segment[0] < next[3]) {
           segment = segment.slice(0);
           segment[0] += (generatedColumn - sourceColumn);
           addSegment(segment, source);
