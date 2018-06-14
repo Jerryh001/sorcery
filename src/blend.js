@@ -45,9 +45,9 @@ module.exports = function blend(node) {
       // Take line mappings from the current source.
       if (sourceIndex !== -1) {
         const source = node.sources[sourceIndex];
-        if (source && source.map) while (++line < generatedLine) {
+        if (source && source.map) while (line < generatedLine - 1) {
           if (++sourceLine !== source.mappings.length) {
-            mappings[line] = traced = [];
+            mappings[++line] = traced = [];
 
             // Copy the segments of this source line.
             const segments = source.mappings[sourceLine];
