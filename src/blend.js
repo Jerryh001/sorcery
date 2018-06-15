@@ -18,8 +18,11 @@ module.exports = function blend(node) {
       if (!lines) refs[segment[1]] = lines = [];
 
       columns = lines[segment[2]];
-      if (columns) columns.push(segment[3]);
-      else lines[segment[2]] = [segment[3]];
+      if (columns) {
+        uniqueAscendingInsert(columns, segment[3]);
+      } else {
+        lines[segment[2]] = [segment[3]];
+      }
     }
   });
 
@@ -195,18 +198,34 @@ function uniq(arr, val) {
 }
 
 // The range is exclusive.
-function hasValueBetween(vals, start, end) {
-  let low = 0, high = vals.length;
+function hasValueBetween(arr, start, end) {
+  let low = 0, high = arr.length;
   while (low < high) {
-    const i = (low + high) >>> 1;
-    const val = vals[i];
+    const mid = (low + high) >>> 1;
+    const val = arr[mid];
     if (val <= start) {
-      low = i + 1;
+      low = mid + 1;
     } else if (val >= end) {
-      high = i;
+      high = mid;
     } else {
       return true;
     }
   }
   return false;
+}
+
+// Insert unique values in ascending order.
+function uniqueAscendingInsert(arr, val) {
+  let low = 0, high = arr.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    const x = arr[mid];
+    if (x === val) return;
+    if (x < val) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  arr.splice(low, 0, val);
 }
