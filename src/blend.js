@@ -151,14 +151,21 @@ module.exports = function blend(node) {
         curr[1] = uniq(sources, source.sources[base[1]]);
         curr[2] = base[2];
         curr[3] = base[3] + sourceColumn - base[0];
-        if (base[0] === sourceColumn && base.length === 5) {
-          curr[4] = uniq(names, source.names[base[4]]);
+        if (base.length === 5) {
+          // Inherit the names of aligned base segments.
+          if (base[0] === sourceColumn) {
+            curr[4] = uniq(names, source.names[base[4]]);
+          }
+        } else if (curr.length === 5) {
+          // When our segment is named and the base segment is not,
+          // assume this segment cannot be traced to its original source.
+          if (base[0] !== sourceColumn) curr = null;
         }
       } else {
         curr[1] = uniq(sources, null);
       }
 
-      addSegment(curr);
+      curr && addSegment(curr);
 
       // Check referenced columns to avoid duplicate segments.
       const columns = refs[sourceIndex][sourceLine] || emptyArray;
