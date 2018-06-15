@@ -169,9 +169,10 @@ module.exports = function blend(node) {
       let prevColumn = base ? base[0] : -1;
 
       // Interweave old segments between our current and next segments.
+      const nextColumn = next && next[2] === sourceLine ? next[3] : 1/0;
       while (++j < segments.length) {
         let segment = segments[j];
-        if (!next || sourceLine !== next[2] || segment[0] < next[3]) {
+        if (segment[0] < nextColumn) {
           if (!hasValueBetween(columns, prevColumn, segment[0] + 1)) {
             segment = segment.slice(0);
             segment[0] += (generatedColumn - sourceColumn);
