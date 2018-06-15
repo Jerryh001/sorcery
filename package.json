@@ -1,7 +1,7 @@
 {
   "name": "@cush/sorcery",
   "description": "Resolve a chain of sourcemaps back to the original source",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "repository": "https://github.com/aleclarson/sorcery",
   "main": "src/index.js",
   "license": "MIT",
