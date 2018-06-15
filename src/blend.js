@@ -140,13 +140,9 @@ module.exports = function blend(node) {
       const sourceColumn = curr[3];
       const generatedColumn = curr[0];
 
-      let j = -1; // segment index
-      const segments = source.mappings[sourceLine];
-
       // Find the first segment with a greater column.
-      while (++j !== segments.length) {
-        if (segments[j][0] > sourceColumn) break;
-      }
+      const segments = source.mappings[sourceLine];
+      let j = findGreaterColumn(segments, sourceColumn);
 
       // A "base segment" is required for tracing to a grand-parent.
       let base;
@@ -196,6 +192,16 @@ module.exports = function blend(node) {
 function uniq(arr, val) {
   const i = arr.indexOf(val);
   return ~i ? i : arr.push(val) - 1;
+}
+
+// Get the first segment with a greater column.
+function findGreaterColumn(segments, column) {
+  let low = 0, high = segments.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    segments[mid][0] <= column ? (low = mid + 1) : (high = mid);
+  }
+  return low;
 }
 
 // The range is exclusive.
