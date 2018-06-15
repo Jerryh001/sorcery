@@ -162,19 +162,23 @@ module.exports = function blend(node) {
 
       // Check referenced columns to avoid duplicate segments.
       const columns = refs[sourceIndex][sourceLine] || emptyArray;
-      let prevColumn = base ? base[0] : -1;
+      let baseColumn = base ? base[0] : -1;
 
       // Interweave old segments between our current and next segments.
-      const nextColumn = next && next[2] === sourceLine ? next[3] : 1/0;
+      const nextColumn = next ? next[0] : 1/0;
       while (++j < segments.length) {
         let segment = segments[j];
-        if (segment[0] < nextColumn) {
-          if (!hasValueBetween(columns, prevColumn, segment[0] + 1)) {
-            segment = segment.slice(0);
-            segment[0] += (generatedColumn - sourceColumn);
-            addSegment(segment, source);
-            prevColumn = segment[0];
-          } else break;
+
+        // The generated column is shifted to fit into the root source map.
+        const column = segment[0] + generatedColumn - sourceColumn;
+        if (column >= nextColumn) break;
+
+        // Avoid duplicates by checking if this segment goes elsewhere.
+        if (!hasValueBetween(columns, baseColumn, segment[0] + 1)) {
+          segment = segment.slice(0);
+          segment[0] = column;
+          addSegment(segment, source);
+          baseColumn = segment[0];
         } else break;
       }
     });
