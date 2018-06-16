@@ -16,34 +16,19 @@ class Node {
   }
 
   loadMappings(opts) {
-    let map = this.map || opts.getMap(this.file);
-    if (map == null) {
-      if (this.content === null) {
-        const content = opts.readFile(this.file);
-        if (typeof content === "string") {
-          this.content = content;
-        } else return false;
-      }
-      const url = parseMapUrl(this.content);
-      if (url) {
-        if (/^data:/.test(url)) {
-          const match = /;base64,([+a-z/0-9]+={0,2})$/i.exec(url);
-          if (!match) {
-            throw new Error("Sourcemap URL is not base64-encoded");
-          }
-          map = atob(match[1]);
-        } else if (this.file) {
-          map = opts.readFile(join(dirname(this.file), decodeURI(url)));
-        }
-      }
+    if (this.mappings !== null) {
+      return true;
     }
-    if (map) {
-      if (typeof map == "string") {
+    if (this.map !== false) {
+      let map = this.map || this._loadSourceMap(opts);
+      if (typeof map === "string") {
         map = JSON.parse(map);
       }
       this.map = map;
-      this.mappings = decode(map.mappings);
-      return true;
+      if (map !== false) {
+        this.mappings = decode(map.mappings);
+        return true;
+      }
     }
     return false;
   }
@@ -82,6 +67,39 @@ class Node {
       return true;
     }
     return false;
+  }
+
+  _loadSourceMap(opts) {
+    // May be cached by the user.
+    if (this.file !== null) {
+      const map = opts.getMap(this.file);
+      if (map != null) return map;
+    }
+    // The content may be cached by the user.
+    if (this.content === null) {
+      const content = opts.readFile(this.file);
+      if (typeof content === "string") {
+        this.content = content;
+      } else return false;
+    }
+
+    // Look for a `sourceMappingURL` comment.
+    const url = parseMapUrl(this.content);
+    if (url === null) return false;
+
+    // Check if `sourceMappingURL` is base64.
+    if (/^data:/.test(url)) {
+      const match = /;base64,([+a-z/0-9]+={0,2})$/i.exec(url);
+      if (!match) {
+        throw new Error("Sourcemap URL is not base64-encoded");
+      }
+      // Decode the `sourceMappingURL` from base64.
+      return atob(match[1]);
+    }
+
+    // Try reading the `sourceMappingURL` as a file.
+    return this.file !== null &&
+      opts.readFile(join(dirname(this.file), decodeURI(url)));
   }
 }
 
