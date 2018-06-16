@@ -57,7 +57,11 @@ class Node {
         if (source || content != null) {
           const file = source ? join(sourceRoot, source) : null;
           const node = new Node(file, content);
-          if (node.loadMappings(opts)) node.loadSources(opts);
+          // Avoid calling `opts.getMap` when the parent node has the same
+          // filename, because this can easily cause infinite recursion.
+          if (node.map || !node.file || node.file !== this.file) {
+            node.loadMappings(opts) && node.loadSources(opts);
+          }
           if (node.map) final = false;
           return node;
         }
