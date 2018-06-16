@@ -182,10 +182,10 @@ module.exports = function blend(node) {
 
         // Avoid duplicates by checking if this segment goes elsewhere.
         if (!hasValueBetween(columns, baseColumn, segment[0] + 1)) {
+          baseColumn = segment[0];
           segment = segment.slice(0);
           segment[0] = column;
           addSegment(segment, source);
-          baseColumn = segment[0];
         } else break;
       }
     });
