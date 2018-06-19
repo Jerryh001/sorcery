@@ -105,7 +105,7 @@ sorcery.portal = function(chain, opts = {}) {
 
     return {
       source: source ? source.file : null,
-      line: sourceLine,
+      line: sourceLine + 1,
       column: sourceColumn,
       name: sourceName,
     };
