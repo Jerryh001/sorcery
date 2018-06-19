@@ -63,34 +63,52 @@ sorcery.portal = function(chain, opts = {}) {
   trace(main);
   main.final = !main.sources.some(source => source !== null);
 
-  return function trace(line, column) {
-    const segments = main.mappings[line];
-    let i = -1; while (++i < segments.length) {
+  // `line` is one-based and `column` is zero-based
+  return function portal(line, column) {
+    let segments = main.mappings[--line];
+    let i = -1; while (++i !== segments.length) {
       if (segments[i][0] > column) break;
     }
-    if (--i !== -1) {
-      const segment = segments[i];
-      const source = main.sources[segment[1]];
-      if (!source && !main.final) {
+
+    let l = line;
+    if (--i === -1) {
+      while (true) {
+        if (--l !== -1) {
+          segments = main.mappings[l];
+          i = segments.length - 1;
+          if (i !== -1) break;
+        } else return null;
+      }
+    }
+
+    const segment = segments[i];
+    const source = main.sources[segment[1]];
+    if (!source && !main.final) {
+      return null;
+    }
+
+    const sourceLine = l === line
+      ? segment[2] : segment[2] + line - l;
+    const sourceColumn = l === line
+      ? segment[3] + column - segment[0] : column;
+
+    if (segment[3] !== sourceColumn) {
+      const content = source && (source.content || opts.readFile(source));
+      const line = (content || "").split("\n")[sourceLine];
+      if (!line || sourceColumn >= line.length) {
         return null;
       }
-      const sourceLine = segment[2];
-      const sourceColumn = segment[3] + column - segment[0];
-      if (segment[3] !== sourceColumn) {
-        const content = source && (source.content || opts.readFile(source));
-        const line = (content || "").split("\n")[sourceLine];
-        if (!line || sourceColumn >= line.length) {
-          return null;
-        }
-      }
-      return {
-        source: source ? source.file : null,
-        line: sourceLine,
-        column: sourceColumn,
-        name: segment[4] || null,
-      };
     }
-    return null;
+
+    const sourceName = l === line && segment[4]
+      ? main.names[segment[4]] : null;
+
+    return {
+      source: source ? source.file : null,
+      line: sourceLine,
+      column: sourceColumn,
+      name: sourceName,
+    };
   };
 };
 
