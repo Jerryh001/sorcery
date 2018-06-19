@@ -55,7 +55,7 @@ a file has no sourcemap, you should return false to avoid extra work.
 ## `sorcery.portal`
 
 The `portal` function takes the same arguments as `sorcery`, but it returns a
-`trace` function instead of a `SourceMap` object.
+function instead of a `SourceMap` object.
 
 The returned function traces a `(line: number, column: number)` pair to its
 original source. It returns an object (or null if the pair is untraceable)
@@ -68,7 +68,7 @@ which has the following properties:
 
 ```js
 const trace = sorcery.portal(chain, options);
-trace(0 /* zero-based line */, 0 /* zero-based column */); // {source, line, column, name} || null
+trace(1 /* one-based line */, 0 /* zero-based column */); // {source, line, column, name} || null
 ```
 
 ## License
