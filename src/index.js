@@ -21,10 +21,17 @@ function sorcery(chain, opts = {}) {
   trace(main);
 
   let sourceRoot = "";
+  let sourcesContent;
   if (main.sources[0] || main.sources.length > 1) {
-    sourceRoot = slash(opts.sourceRoot || "");
-    if (isAbsolute(sourceRoot)) {
-      throw new Error("`sourceRoot` cannot be absolute");
+    if (opts.sourceRoot) {
+      sourceRoot = slash(opts.sourceRoot);
+      if (isAbsolute(sourceRoot)) {
+        throw new Error("`sourceRoot` cannot be absolute");
+      }
+    }
+    if (opts.includeContent !== false) {
+      sourcesContent = main.sources.map(source =>
+        source && (source.content || opts.readFile(source.file)) || null);
     }
   }
 
@@ -33,10 +40,7 @@ function sorcery(chain, opts = {}) {
     sources: main.sources.map(source =>
       source && source.file ? relative(sourceRoot, slash(source.file)) : null),
     sourceRoot,
-    sourcesContent: opts.includeContent !== false
-      ? main.sources.map(source =>
-        source && (source.content || opts.readFile(source.file)) || null)
-      : new Array(main.sources.length).fill(null),
+    sourcesContent,
     names: main.names,
     mappings: encode(main.mappings),
   });
