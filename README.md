@@ -1,4 +1,4 @@
-# sorcery v1.4.6
+# sorcery v1.4.7
 
 Fork of [Rich-Harris/sorcery][1] that caters toward build tools.
 
