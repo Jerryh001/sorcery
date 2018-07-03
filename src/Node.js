@@ -36,19 +36,7 @@ class Node {
   loadSources(opts) {
     const {map} = this;
     if (map) {
-      let sourceRoot = map.sourceRoot || "";
-      if (map.sources[0] || map.sources.length > 1) {
-        if (this.file && !isAbsolute(sourceRoot)) {
-          // When the generated file is relative (eg: ../foo.js),
-          // we cannot easily convert `sourceRoot` into an absolute path.
-          // Instead, we have to hope the `sourcesContent` array is populated,
-          // or support relative paths in our `readFile` and `getMap` functions.
-          if (!map.file || map.file[0] !== ".") {
-            sourceRoot = join(dirname(this.file), sourceRoot);
-          }
-        }
-      }
-
+      const sourceRoot = this._getSourceRoot();
       const sourcesContent = map.sourcesContent || [];
 
       let final = true;
@@ -71,6 +59,25 @@ class Node {
       return true;
     }
     return false;
+  }
+
+  _getSourceRoot() {
+    let {sources, sourceRoot} = this.map;
+
+    // The source root isn't used when the only source is null.
+    if (sources[0] || sources.length > 1) {
+      if (!sourceRoot) {
+        sourceRoot = "";
+      } else if (isAbsolute(sourceRoot)) {
+        return sourceRoot;
+      }
+      // The source root is relative to the generated file.
+      if (this.file && isAbsolute(this.file)) {
+        return join(dirname(this.file), sourceRoot);
+      }
+    }
+
+    return "";
   }
 
   _loadSourceMap(opts) {
