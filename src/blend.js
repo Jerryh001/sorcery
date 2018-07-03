@@ -141,7 +141,7 @@ module.exports = function blend(node) {
       const generatedColumn = curr[0];
 
       // Find the first segment with a greater column.
-      const segments = source.mappings[sourceLine];
+      const segments = source.mappings[sourceLine] || [];
       let j = findGreaterColumn(segments, sourceColumn);
 
       // A "base segment" is required for tracing to a grand-parent.
