@@ -1,4 +1,4 @@
-const { dirname, isAbsolute, join } = require("path");
+const { dirname, isAbsolute, join, resolve } = require("path");
 const { decode } = require("sourcemap-codec");
 
 class Node {
@@ -43,7 +43,7 @@ class Node {
       this.sources = map.sources.map((source, i) => {
         const content = sourcesContent[i];
         if (source || content != null) {
-          const file = source ? join(sourceRoot, source) : null;
+          const file = source ? resolve(sourceRoot, source) : null;
           const node = new Node(file, content);
           // Avoid calling `opts.getMap` when the parent node has the same
           // filename, because this can easily cause infinite recursion.
@@ -73,7 +73,7 @@ class Node {
       }
       // The source root is relative to the generated file.
       if (this.file && isAbsolute(this.file)) {
-        return join(dirname(this.file), sourceRoot);
+        return resolve(dirname(this.file), sourceRoot);
       }
     }
 
