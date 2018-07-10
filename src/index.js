@@ -25,9 +25,6 @@ function sorcery(chain, opts = {}) {
   if (main.sources[0] || main.sources.length > 1) {
     if (opts.sourceRoot) {
       sourceRoot = slash(opts.sourceRoot);
-      if (isAbsolute(sourceRoot)) {
-        throw new Error("`sourceRoot` cannot be absolute");
-      }
     }
     if (opts.includeContent !== false) {
       sourcesContent = main.sources.map(source =>
