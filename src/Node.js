@@ -43,13 +43,15 @@ class Node {
       this.sources = map.sources.map((source, i) => {
         const content = sourcesContent[i];
         if (source || content != null) {
-          const file = source ? resolve(sourceRoot, source) : null;
-          const node = new Node(file, content);
+          if (source && sourceRoot) source = resolve(sourceRoot, source);
+          const node = new Node(source, content);
+
           // Avoid calling `opts.getMap` when the parent node has the same
           // filename, because this can easily cause infinite recursion.
-          if (node.map || !node.file || node.file !== this.file) {
+          if (node.map || !source || source !== this.file) {
             node.loadMappings(opts) && node.loadSources(opts);
           }
+
           if (node.map) final = false;
           return node;
         }

@@ -32,10 +32,17 @@ function sorcery(chain, opts = {}) {
     }
   }
 
+  const sources = main.sources.map(source => {
+    if (source && source.file) {
+      source = slash(source.file);
+      return sourceRoot ? relative(sourceRoot, source) : source;
+    }
+    return null;
+  });
+
   return new SourceMap({
     file,
-    sources: main.sources.map(source =>
-      source && source.file ? relative(sourceRoot, slash(source.file)) : null),
+    sources,
     sourceRoot,
     sourcesContent,
     names: main.names,
