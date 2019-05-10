@@ -127,11 +127,11 @@ module.exports = function blend(node) {
       [, sourceIndex, sourceLine] = curr;
 
       const source = node.sources[sourceIndex];
-      if (source === null) {
+      if (!source) {
         curr[1] = uniq(sources, null);
         return addSegment(curr);
       }
-      if (source.map === null) {
+      if (!source.map) {
         curr[1] = uniq(sources, source);
         return addSegment(curr);
       }
